@@ -3,70 +3,67 @@ import { View, Text, FlatList, StyleSheet, Button, Pressable, Alert, RefreshCont
 import { useRouter } from 'expo-router';
 import { db } from '../../firebaseConfig';
 import { collection, getDocs, doc, deleteDoc } from 'firebase/firestore';
-import { APP_CONFIG } from '@/config';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const [activities, setActivities] = useState<{ id: string; type: string; duration: string; calories: string }[]>([]);
+  const [cleanupTrips, setCleanupTrips] = useState<{ id: string; location: string; date: string; volunteers: number; wasteCollectedKG: number }[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-
   const [loading, setLoading] = useState(true);
 
-  // 🔹 Funksjon for å hente treningsøkter fra Firestore
-  const fetchActivities = async () => {
+  // 🔹 Henter ryddeaksjoner fra Firestore
+  const fetchCleanupTrips = async () => {
     setLoading(true);
     try {
-      const querySnapshot = await getDocs(collection(db, "activities"));
-      const fetchedActivities = querySnapshot.docs.map(doc => ({
+      const querySnapshot = await getDocs(collection(db, "cleanup_trips"));
+      const fetchedTrips = querySnapshot.docs.map(doc => ({
         id: doc.id,
-        type: doc.data().type || "Ukjent type",
-        duration: doc.data().duration || "0 min",
-        calories: doc.data().calories || "0 kcal",
+        location: doc.data()?.location || "Ukjent sted",
+        date: doc.data()?.date || "Ukjent dato",
+        volunteers: doc.data()?.volunteers || 0,
+        wasteCollectedKG: doc.data()?.wasteCollectedKG || 0,
       }));
-  
-      console.log("📥 Hentet aktiviteter:", fetchedActivities);  // Debugging
-      setActivities(fetchedActivities);
+
+      console.log("📥 Hentet ryddeaksjoner:", fetchedTrips);
+      setCleanupTrips(fetchedTrips);
     } catch (error) {
-      console.error("❌ Feil ved henting av data:", error);
+      console.error("❌ Firebase-feil ved henting av data:", error.code, error.message);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
-  
+
   const onRefresh = () => {
     setRefreshing(true);
-    fetchActivities();
+    fetchCleanupTrips();
   };
 
   useEffect(() => {
-    fetchActivities();
+    fetchCleanupTrips();
   }, []);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Dine Treningsøkter</Text>
+      <Text style={styles.title}>Dine ryddeaksjoner</Text>
 
-      <Button title="➕ Ny aktivitet" onPress={() => router.push('/new-activity')} />
+      <Button title="➕ Ny ryddeaksjon" onPress={() => router.push('/new-activity')} />
 
       {loading ? <Text>Laster...</Text> : (
         <FlatList
-        data={activities}
-        keyExtractor={(item) => item.id}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        renderItem={({ item }) => (
-          <Pressable onPress={() => router.push(`/activity/${item.id}`)}>
-            <View style={styles.card}>
-              <Text style={styles.activityType}>{item.type}</Text>
-              <Text>Varighet: {item.duration}</Text>
-              <Text>Kalorier: {item.calories}</Text>
-            </View>
-          </Pressable>
-        )}
-      />
-      
+          data={cleanupTrips}
+          keyExtractor={(item) => item.id}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          renderItem={({ item }) => (
+            <Pressable onPress={() => router.push(`/activity/${item.id}`)}>
+              <View style={styles.card}>
+                <Text style={styles.activityType}>📍 {item.location}</Text>
+                <Text>📅 Dato: {item.date}</Text>
+                <Text>👥 Frivillige: {item.volunteers}</Text>
+                <Text>🗑️ Innsamlet avfall: {item.wasteCollectedKG} kg</Text>
+              </View>
+            </Pressable>
+          )}
+        />
       )}
     </View>
   );

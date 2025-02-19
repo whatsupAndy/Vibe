@@ -4,12 +4,13 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { db } from "@/firebaseConfig";
 import { doc, updateDoc, deleteDoc, getDoc } from "firebase/firestore";
 
-export default function ActivityDetails() {
+export default function CleanupTripDetails() {
   const router = useRouter();
-  const { id, type, duration, calories } = useLocalSearchParams();
-  const [newType, setNewType] = useState(type as string);
-  const [newDuration, setNewDuration] = useState(duration as string);
-  const [newCalories, setNewCalories] = useState(calories as string);
+  const { id, location, date, volunteers, wasteCollectedKG } = useLocalSearchParams();
+  const [newLocation, setNewLocation] = useState(location as string);
+  const [newDate, setNewDate] = useState(date as string);
+  const [newVolunteers, setNewVolunteers] = useState(volunteers as string);
+  const [newWasteCollectedKG, setNewWasteCollectedKG] = useState(wasteCollectedKG as string);
   const [loading, setLoading] = useState(true);
 
   // 🔹 Henter data fra Firestore hvis det ikke finnes i URL
@@ -19,18 +20,19 @@ export default function ActivityDetails() {
       return;
     }
 
-    if (!type || !duration || !calories) {
+    if (!location || !date || !volunteers || !wasteCollectedKG) {
       console.log("🔄 Henter data fra Firestore...");
       const fetchData = async () => {
         try {
-          const docRef = doc(db, "activities", id as string);
+          const docRef = doc(db, "cleanup_trips", id as string);
           const docSnap = await getDoc(docRef);
 
           if (docSnap.exists()) {
             const data = docSnap.data();
-            setNewType(data.type || "");
-            setNewDuration(data.duration || "");
-            setNewCalories(data.calories || "");
+            setNewLocation(data.location || "Ukjent sted");
+            setNewDate(data.date || "Ukjent dato");
+            setNewVolunteers(String(data.volunteers || 0));
+            setNewWasteCollectedKG(String(data.wasteCollectedKG || 0));
           } else {
             console.error("❌ Dokumentet finnes ikke i Firestore");
           }
@@ -44,70 +46,53 @@ export default function ActivityDetails() {
     } else {
       setLoading(false);
     }
-  }, [id, type, duration, calories]);
+  }, [id, location, date, volunteers, wasteCollectedKG]);
 
   const handleUpdate = async () => {
     try {
-      const activityRef = doc(db, "activities", id as string);
-      await updateDoc(activityRef, {
-        type: newType,
-        duration: newDuration,
-        calories: newCalories,
+      const tripRef = doc(db, "cleanup_trips", id as string);
+      await updateDoc(tripRef, {
+        location: newLocation || "Ukjent sted",
+        date: newDate || new Date().toISOString().split("T")[0],
+        volunteers: parseInt(newVolunteers) || 0,
+        wasteCollectedKG: parseInt(newWasteCollectedKG) || 0,
       });
 
-      Alert.alert("✅ Oppdatert!", "Treningsøkten er endret.");
-      router.push("/"); // 🔹 Gå tilbake til hovedsiden
+      Alert.alert("✅ Oppdatert!", "Ryddeaksjonen er oppdatert.");
+      router.push("/"); 
     } catch (error) {
       console.error("❌ Feil ved oppdatering:", error);
-      Alert.alert("⚠️ Feil", "Kunne ikke oppdatere økten.");
+      Alert.alert("⚠️ Feil", "Kunne ikke oppdatere ryddeaksjonen.");
     }
   };
 
   const handleDelete = async () => {
-    console.log("🗑 Prøver å slette aktiviteten med ID:", id); 
-  
-    if (Platform.OS === "web") {
-      const confirmDelete = window.confirm("Er du sikker på at du vil slette denne treningsøkten?");
-      if (!confirmDelete) return;
-      try {
-        console.log("🚀 Sletter fra Firestore nå...");
-        await deleteDoc(doc(db, "activities", id as string));
-        console.log("✅ Sletting vellykket!");
-  
-        alert("🗑 Slettet! Treningsøkten er fjernet."); // Enkel alert på Web
-        router.push("/"); 
-      } catch (error) {
-        console.error("❌ Feil ved sletting:", error);
-        alert("⚠️ Feil: Kunne ikke slette økten.");
-      }
-    } else {
-      Alert.alert(
-        "Bekreft sletting",
-        "Er du sikker på at du vil slette denne treningsøkten?",
-        [
-          { text: "Avbryt", style: "cancel" },
-          { 
-            text: "🗑 Slett", 
-            onPress: async () => {
-              try {
-                console.log("🚀 Sletter fra Firestore nå...");
-                await deleteDoc(doc(db, "activities", id as string));
-                console.log("✅ Sletting vellykket!");
-  
-                Alert.alert("🗑 Slettet!", "Treningsøkten er fjernet.");
-                router.push("/"); 
-              } catch (error) {
-                console.error("❌ Feil ved sletting:", error);
-                Alert.alert("⚠️ Feil", "Kunne ikke slette økten.");
-              }
+    console.log("🗑 Prøver å slette ryddeaksjonen med ID:", id);
+
+    Alert.alert(
+      "Bekreft sletting",
+      "Er du sikker på at du vil slette denne ryddeaksjonen?",
+      [
+        { text: "Avbryt", style: "cancel" },
+        { 
+          text: "🗑 Slett", 
+          onPress: async () => {
+            try {
+              console.log("🚀 Sletter fra Firestore nå...");
+              await deleteDoc(doc(db, "cleanup_trips", id as string));
+              console.log("✅ Sletting vellykket!");
+
+              Alert.alert("🗑 Slettet!", "Ryddeaksjonen er fjernet.");
+              router.push("/");
+            } catch (error) {
+              console.error("❌ Feil ved sletting:", error);
+              Alert.alert("⚠️ Feil", "Kunne ikke slette ryddeaksjonen.");
             }
           }
-        ]
-      );
-    }
+        }
+      ]
+    );
   };
-  
-  
 
   if (loading) {
     return (
@@ -124,17 +109,20 @@ export default function ActivityDetails() {
     >
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.container}>
-          <Text style={styles.title}>Rediger Treningsøkt</Text>
-  
-          <Text style={styles.label}>Type:</Text>
-          <TextInput style={styles.input} value={newType} onChangeText={setNewType} />
-          
-          <Text style={styles.label}>Varighet:</Text>
-          <TextInput style={styles.input} value={newDuration} onChangeText={setNewDuration} keyboardType="numeric" />
-          
-          <Text style={styles.label}>Kalorier:</Text>
-          <TextInput style={styles.input} value={newCalories} onChangeText={setNewCalories} keyboardType="numeric" />
-          
+          <Text style={styles.title}>Rediger ryddeaksjon</Text>
+
+          <Text style={styles.label}>📍 Sted:</Text>
+          <TextInput style={styles.input} value={newLocation} onChangeText={setNewLocation} />
+
+          <Text style={styles.label}>📅 Dato:</Text>
+          <TextInput style={styles.input} value={newDate} onChangeText={setNewDate} />
+
+          <Text style={styles.label}>👥 Frivillige:</Text>
+          <TextInput style={styles.input} value={newVolunteers} onChangeText={setNewVolunteers} keyboardType="numeric" />
+
+          <Text style={styles.label}>🗑️ Innsamlet avfall (kg):</Text>
+          <TextInput style={styles.input} value={newWasteCollectedKG} onChangeText={setNewWasteCollectedKG} keyboardType="numeric" />
+
           <Button title="💾 Lagre endringer" onPress={handleUpdate} />
           <Button title="🗑 Slett" color="red" onPress={handleDelete} />
         </View>
@@ -143,7 +131,7 @@ export default function ActivityDetails() {
   );
 }
 
-// 🔹 Flyttet styles utenfor komponenten for bedre ytelse
+// 🔹 Styling for skjermen
 const styles = StyleSheet.create({
   scrollContainer: {
     flexGrow: 1, 

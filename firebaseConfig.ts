@@ -1,20 +1,22 @@
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";  // ✅ For autentisering (hvis du skal bruke det)
-import { getFirestore } from "firebase/firestore";  // ✅ For Firestore database
-import Constats from "expo-constants"; 
+import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
+import Constants from "expo-constants";
+
+// 🔍 Sjekk at variablene blir hentet riktig
+console.log("✅ Laster Firebase-miljøvariabler:", Constants.expoConfig?.extra);
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBuPmfUoq3qQvKp3q1c2Pxtmlp4cjZ0eak",
-  authDomain: "fitplus-6d6ab.firebaseapp.com",
-  projectId: "fitplus-6d6ab",
-  storageBucket: "fitplus-6d6ab.appspot.com",  // ✅ Korrigert feil URL (bruk `.appspot.com`)
-  messagingSenderId: "981549255848",
-  appId: "1:981549255848:web:5e996dbeba8f0bf3ed469d",
-  measurementId: "G-B2B77NNNYQ"
+  apiKey: Constants.expoConfig?.extra?.FIREBASE_API_KEY,
+  authDomain: Constants.expoConfig?.extra?.FIREBASE_AUTH_DOMAIN,
+  projectId: Constants.expoConfig?.extra?.FIREBASE_PROJECT_ID,
+  storageBucket: Constants.expoConfig?.extra?.FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: Constants.expoConfig?.extra?.FIREBASE_MESSAGING_SENDER_ID,
+  appId: Constants.expoConfig?.extra?.FIREBASE_APP_ID,
 };
 
-// ✅ Initialiser Firebase
+// 🚀 Initialiser Firebase
 const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);  // ✅ Brukes hvis du implementerer autentisering
-export const db = getFirestore(app);  // ✅ Firestore database
+export const auth = getAuth(app);
+export const db = getFirestore(app);
 export default app;
