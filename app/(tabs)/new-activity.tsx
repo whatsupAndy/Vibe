@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { db } from '../../firebaseConfig';
 import { collection, addDoc } from 'firebase/firestore';
 
+
 export default function NewCleanupTripScreen() {
   const router = useRouter();
 
