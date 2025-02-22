@@ -1,5 +1,8 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Alert, Image, TouchableOpacity, KeyboardAvoidingView, ScrollView, Platform, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { 
+  View, Text, TextInput, Button, StyleSheet, Alert, Image, TouchableOpacity, 
+  KeyboardAvoidingView, ScrollView, Platform, TouchableWithoutFeedback, Keyboard 
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { db } from '../../firebaseConfig';
 import { collection, addDoc } from 'firebase/firestore';
@@ -11,10 +14,10 @@ export default function NewCleanupTripScreen() {
   // 🔹 Tilstander for inputfeltene
   const [location, setLocation] = useState('');
   const [date, setDate] = useState('');
-  const [participants, setParticipants] = useState('');
+  const [maxParticipants, setMaxParticipants] = useState('');
   const [organizer, setOrganizer] = useState('');
   const [wasteCollectedKG, setWasteCollectedKG] = useState('');
-  const [image, setImage] = useState(null); // 🔹 Lagre valgt bilde
+  const [image, setImage] = useState(null);
 
   // 🔹 Funksjon for å velge bilde fra galleriet
   const pickImage = async () => {
@@ -26,13 +29,13 @@ export default function NewCleanupTripScreen() {
     });
 
     if (!result.canceled) {
-      setImage(result.assets[0].uri); // 🔹 Lagre bildeadressen
+      setImage(result.assets[0].uri);
     }
   };
 
   // 🔹 Funksjon for å lagre data i Firestore
   const handleSave = async () => {
-    if (!location || !date || !participants || !wasteCollectedKG) {
+    if (!location || !date || !maxParticipants || !wasteCollectedKG) {
       Alert.alert('Feil', 'Vennligst fyll ut alle feltene');
       return;
     }
@@ -41,16 +44,17 @@ export default function NewCleanupTripScreen() {
       location: location || 'Ukjent sted',
       date: date || new Date().toISOString().split('T')[0],
       organizer: organizer || 'Ukjent arrangør',
-      participants: parseInt(participants) || 0,
+      participants: [], // 🔹 Sikrer at `participants` alltid er en array
+      maxParticipants: parseInt(maxParticipants) || 10, // 🔹 Standard til 10 hvis tomt
       wasteCollectedKG: parseInt(wasteCollectedKG) || 0,
-      imageUrl: image || null, // 🔹 Lagre bildet hvis valgt
+      imageUrl: image || null,
     };
 
     try {
       await addDoc(collection(db, 'cleanup_trips'), newCleanupTrip);
 
       Alert.alert('Suksess!', 'Ryddeaksjonen er lagret!', [
-        { text: 'OK', onPress: () => router.push('/') },
+        { text: 'OK', onPress: () => router.replace('/') }, // ✅ Bruker `replace` for å unngå tilbake-knapp til denne siden
       ]);
     } catch (error) {
       Alert.alert('Feil', 'Kunne ikke lagre ryddeaksjonen. Prøv igjen.');
@@ -59,26 +63,21 @@ export default function NewCleanupTripScreen() {
   };
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
-      style={{ flex: 1 }}
-    >
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <ScrollView contentContainerStyle={styles.container}>
           <Text style={styles.title}>Opprett ny ryddeaksjon</Text>
 
           <TextInput style={styles.input} placeholder="Arrangør" value={organizer} onChangeText={setOrganizer} />
           <TextInput style={styles.input} placeholder="Sted" value={location} onChangeText={setLocation} />
-          <TextInput style={styles.input} placeholder="Dato & tid (YYYY-MM-DD kl. 00:00)" value={date} onChangeText={setDate} />
-          <TextInput style={styles.input} placeholder="Maks deltagere" value={participants} onChangeText={setParticipants} keyboardType="numeric" />
-          <TextInput style={styles.input} placeholder="Oppryddingsmål kg" value={wasteCollectedKG} onChangeText={setWasteCollectedKG} keyboardType="numeric" />
+          <TextInput style={styles.input} placeholder="Dato (YYYY-MM-DD)" value={date} onChangeText={setDate} />
+          <TextInput style={styles.input} placeholder="Maks deltagere" value={maxParticipants} onChangeText={setMaxParticipants} keyboardType="numeric" />
+          <TextInput style={styles.input} placeholder="Oppryddingsmål (kg)" value={wasteCollectedKG} onChangeText={setWasteCollectedKG} keyboardType="numeric" />
 
-          {/* 🔹 Velg bilde-knapp */}
           <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
             <Text style={styles.imagePickerText}>📸 Velg bilde fra galleri</Text>
           </TouchableOpacity>
 
-          {/* 🔹 Viser bildet hvis valgt */}
           {image && <Image source={{ uri: image }} style={styles.image} />}
 
           <Button title="Lagre ryddeaksjon" onPress={handleSave} />
@@ -88,7 +87,6 @@ export default function NewCleanupTripScreen() {
   );
 }
 
-// 🔹 Styling
 const styles = StyleSheet.create({
   container: { padding: 20, backgroundColor: '#f8f9fa' },
   title: { fontSize: 22, fontWeight: 'bold', marginBottom: 15 },

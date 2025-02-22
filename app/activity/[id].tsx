@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Key, useEffect, useState } from "react";
 import { View, Text, Button, Alert, StyleSheet, ScrollView, Image } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { db, auth } from "@/firebaseConfig";
@@ -8,22 +8,29 @@ export default function CleanupTripDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const [loading, setLoading] = useState(true);
-  const [trip, setTrip] = useState(null);
+  const [trip, setTrip] = useState<any>(null);
   const [user, setUser] = useState(auth.currentUser);
+  const [participantUsernames, setParticipantUsernames] = useState<{ [uid: string]: string }>({});
 
   useEffect(() => {
     if (!id) {
       console.error("❌ Ingen ID spesifisert!");
       return;
     }
-
+  
     const fetchData = async () => {
       try {
         const docRef = doc(db, "cleanup_trips", id as string);
         const docSnap = await getDoc(docRef);
-
+  
         if (docSnap.exists()) {
-          setTrip(docSnap.data());
+          const tripData = docSnap.data();
+          setTrip(tripData);
+  
+          // 🔹 Kall fetchUsernames hvis det finnes deltakere
+          if (tripData.participants && tripData.participants.length > 0) {
+            await fetchUsernames(tripData.participants);
+          }
         } else {
           console.error("❌ Dokumentet finnes ikke i Firestore");
         }
@@ -33,9 +40,35 @@ export default function CleanupTripDetailScreen() {
         setLoading(false);
       }
     };
-
+  
     fetchData();
-  }, [id]);
+  }, [id]); // 🚀 Kjør kun når ID endres
+  
+
+  // 🔹 Henter brukernavnene for alle påmeldte deltakere basert på UID
+  const fetchUsernames = async (userIds: string[]) => {
+    let usernames: { [uid: string]: string } = {};
+  
+    try {
+      const userDocs = await Promise.all(
+        userIds.map(async (uid) => {
+          const userRef = doc(db, "users", uid);
+          const userDoc = await getDoc(userRef);
+          return userDoc.exists() ? { uid, username: userDoc.data().username } : { uid, username: "Ukjent bruker" };
+        })
+      );
+  
+      userDocs.forEach(({ uid, username }) => {
+        usernames[uid] = username;
+      });
+  
+      setParticipantUsernames(usernames);
+    } catch (error) {
+      console.error("❌ Feil ved henting av brukernavn:", error);
+    }
+  };
+  
+  
 
   if (loading) {
     return <Text>⏳ Laster detaljer...</Text>;
@@ -45,19 +78,9 @@ export default function CleanupTripDetailScreen() {
     return <Text>⚠️ Kunne ikke finne ryddeaksjonen.</Text>;
   }
 
-  const { 
-    location, 
-    date, 
-    time, 
-    participants = [],  // ✅ Sikrer at `participants` er en array
-    wasteCollectedKG, 
-    imageUrl, 
-    organizer 
-  } = trip;
-  
-  const isFull = participants.length >= trip.maxParticipants;
-  const isSignedUp = Array.isArray(participants) && participants.includes(user?.email);
-  
+  const { location, date, time, participants = [], wasteCollectedKG, imageUrl, organizer } = trip;
+  const isFull = participants.length >= (trip?.maxParticipants ?? 0);
+  const isSignedUp = Array.isArray(participants) && participants.includes(user?.uid);
 
   const handleSignUp = async () => {
     if (!user) {
@@ -65,26 +88,29 @@ export default function CleanupTripDetailScreen() {
       return;
     }
   
-    // ✅ Sikrer at `participants` alltid er en array
-    const currentParticipants = Array.isArray(trip.participants) ? trip.participants : [];
+    if (!trip || !Array.isArray(trip.participants)) {
+      Alert.alert("❌ Feil", "Ugyldige data. Prøv igjen senere.");
+      return;
+    }
   
-    if (currentParticipants.includes(user.email)) {
+    if (trip.participants.includes(user.uid)) {
       Alert.alert("✅ Du er allerede påmeldt.");
       return;
     }
   
-    if (currentParticipants.length >= trip.maxParticipants) {
-      Alert.alert("⚠️ Ingen tilgjengelige plasser.");
+    if (trip.participants.length >= (trip.maxParticipants || 10)) { // 🔹 Sjekker om aksjonen er full
+      Alert.alert("⚠️ Denne ryddeaksjonen er full.");
       return;
     }
   
     try {
       const tripRef = doc(db, "cleanup_trips", id as string);
-      const updatedParticipants = [...currentParticipants, user.email];
+      const updatedParticipants = [...trip.participants, user.uid];
   
       await updateDoc(tripRef, { participants: updatedParticipants });
+      setTrip((prev: any) => ({ ...prev, participants: updatedParticipants }));
   
-      setTrip((prev) => ({ ...prev, participants: updatedParticipants }));
+      fetchUsernames(updatedParticipants); // Oppdaterer brukernavnene
       Alert.alert("🎉 Påmeldt!", "Du er nå påmeldt ryddeaksjonen.");
     } catch (error) {
       console.error("❌ Feil ved påmelding:", error);
@@ -92,30 +118,11 @@ export default function CleanupTripDetailScreen() {
     }
   };
   
-
-  const handleCancelSignUp = async () => {
-    if (!user || !isSignedUp) {
-      Alert.alert("⚠️ Du er ikke påmeldt.");
-      return;
-    }
-
-    try {
-      const tripRef = doc(db, "cleanup_trips", id as string);
-      const updatedParticipants = participants.filter((email) => email !== user.email);
-
-      await updateDoc(tripRef, { participants: updatedParticipants });
-
-      setTrip((prev) => ({ ...prev, participants: updatedParticipants }));
-      Alert.alert("❌ Påmelding kansellert", "Du har meldt deg av ryddeaksjonen.");
-    } catch (error) {
-      console.error("❌ Feil ved avmelding:", error);
-      Alert.alert("⚠️ Kunne ikke melde deg av. Prøv igjen.");
-    }
-  };
+  
+  
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      {/* 🔹 Viser bilde hvis det finnes */}
       {imageUrl ? <Image source={{ uri: imageUrl }} style={styles.image} /> : <Text>📷 Ingen bilde tilgjengelig</Text>}
 
       <Text style={styles.title}>Detaljer for ryddeaksjon</Text>
@@ -134,20 +141,16 @@ export default function CleanupTripDetailScreen() {
 
       <Text style={styles.label}>✅ Påmeldte deltakere:</Text>
       {participants.length > 0 ? (
-        participants.map((p, index) => (
-          <Text key={index} style={styles.participant}>👤 {p}</Text>
+        participants.map((uid: string | number, index: Key | null | undefined) => (
+          <Text key={index} style={styles.participant}>
+            👤 {participantUsernames[uid] || "Ukjent bruker"}
+          </Text>
         ))
       ) : (
         <Text style={styles.info}>Ingen deltakere ennå</Text>
       )}
 
-      {/* 🔹 Påmeldingsknapp */}
       {!isSignedUp && !isFull && <Button title="✅ Meld deg på" onPress={handleSignUp} color="green" />}
-
-      {/* 🔹 Avmeldingsknapp */}
-      {isSignedUp && <Button title="❌ Meld deg av" onPress={handleCancelSignUp} color="red" />}
-
-      {/* 🔹 Viser melding hvis aksjonen er full */}
       {isFull && !isSignedUp && <Text style={styles.fullMessage}>⚠️ Denne aksjonen er full.</Text>}
 
       <Button title="🔙 Tilbake" onPress={() => router.push("/")} />

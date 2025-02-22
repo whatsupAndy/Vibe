@@ -37,12 +37,25 @@ export default function RootLayout() {
       {user ? (
         <>
           <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="new-activity" options={{ headerTitle: "Ny Ryddeaksjon" }} />
+          <Stack.Screen 
+            name="new-activity" 
+            options={{ 
+              headerTitle: "Ny Ryddeaksjon", 
+              headerBackVisible: true // 🔹 Skjuler tilbakeknappen på "Ny aksjon"
+            }} 
+          />
+          <Stack.Screen 
+            name="activity/[id]" 
+            options={{ 
+              headerTitle: "Ryddeaksjon", 
+              headerBackVisible: true // 🔹 Viser tilbakeknapp på detaljerte sider
+            }} 
+          />
         </>
       ) : (
         <>
-          <Stack.Screen name="login" options={{ headerTitle: "Logg Inn" }} />
-          <Stack.Screen name="register" options={{ headerTitle: "Registrer" }} />
+          <Stack.Screen name="login" options={{ headerTitle: "Logg Inn", headerBackVisible: false }} />
+          <Stack.Screen name="register" options={{ headerTitle: "Registrer", headerBackVisible: true }} />
         </>
       )}
     </Stack>

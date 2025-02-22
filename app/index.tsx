@@ -48,9 +48,10 @@ export default function HomeScreen() {
         id: doc.id,
         location: doc.data()?.location || "Ukjent sted",
         date: doc.data()?.date || "Ukjent dato",
-        participants: doc.data()?.participants || 0,
+        participants: doc.data()?.maxParticipants || 0,
         wasteCollectedKG: doc.data()?.wasteCollectedKG || 0,
       }));
+      
 
       console.log("📥 Hentet ryddeaksjoner:", fetchedTrips);
       setCleanupTrips(fetchedTrips);
