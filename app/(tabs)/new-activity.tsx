@@ -10,12 +10,13 @@ export default function NewCleanupTripScreen() {
   // 🔹 Tilstander for inputfeltene
   const [location, setLocation] = useState('');
   const [date, setDate] = useState('');
-  const [volunteers, setVolunteers] = useState('');
+  const [participants, setParticipants] = useState('');
+  const [organizer, setOrganizer] = useState('');
   const [wasteCollectedKG, setWasteCollectedKG] = useState('');
-
+  
   // 🔹 Funksjon for å lagre data i Firestore
   const handleSave = async () => {
-    if (!location || !date || !volunteers || !wasteCollectedKG) {
+    if (!location || !date || !participants || !wasteCollectedKG) {
       Alert.alert('Feil', 'Vennligst fyll ut alle feltene');
       return;
     }
@@ -24,8 +25,8 @@ export default function NewCleanupTripScreen() {
     const newCleanupTrip = {
       location: location || "Ukjent sted",
       date: date || new Date().toISOString().split("T")[0], // Setter dagens dato hvis tom
-      volunteers: parseInt(volunteers) || 0,
-      wasteCollectedKG: parseInt(wasteCollectedKG) || 0,
+      organizer: organizer || "Ukjent arrangør",
+      participants: parseInt(participants) || 0,
     };
 
     try {
@@ -42,7 +43,14 @@ export default function NewCleanupTripScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Loggfør ny ryddeaksjon</Text>
+      <Text style={styles.title}>Opprett ny ryddeaksjon</Text>
+
+      <TextInput
+        style={styles.input}
+        placeholder="Arrangør"
+        value={organizer}
+        onChangeText={setOrganizer}
+      />
 
       <TextInput
         style={styles.input}
@@ -53,22 +61,22 @@ export default function NewCleanupTripScreen() {
 
       <TextInput
         style={styles.input}
-        placeholder="Dato (YYYY-MM-DD)"
+        placeholder="Dato & tid (YYYY-MM-DD kl. 00:00)"
         value={date}
         onChangeText={setDate}
       />
 
       <TextInput
         style={styles.input}
-        placeholder="Antall frivillige"
-        value={volunteers}
-        onChangeText={setVolunteers}
+        placeholder="Maks deltagere"
+        value={participants}
+        onChangeText={setParticipants}
         keyboardType="numeric"
       />
 
       <TextInput
         style={styles.input}
-        placeholder="Innsamlet avfall (kg)"
+        placeholder="Oppryddingsmål kg"
         value={wasteCollectedKG}
         onChangeText={setWasteCollectedKG}
         keyboardType="numeric"

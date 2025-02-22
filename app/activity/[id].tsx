@@ -1,172 +1,167 @@
 import { useEffect, useState } from "react";
-import { View, Text, TextInput, Button, Alert, StyleSheet, KeyboardAvoidingView, ScrollView, Platform } from "react-native";
+import { View, Text, Button, Alert, StyleSheet, ScrollView, Image } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { db } from "@/firebaseConfig";
-import { doc, updateDoc, deleteDoc, getDoc } from "firebase/firestore";
+import { db, auth } from "@/firebaseConfig";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 
-export default function CleanupTripDetails() {
+export default function CleanupTripDetailScreen() {
   const router = useRouter();
-  const { id, location, date, volunteers, wasteCollectedKG } = useLocalSearchParams();
-  const [newLocation, setNewLocation] = useState(location as string);
-  const [newDate, setNewDate] = useState(date as string);
-  const [newVolunteers, setNewVolunteers] = useState(volunteers as string);
-  const [newWasteCollectedKG, setNewWasteCollectedKG] = useState(wasteCollectedKG as string);
+  const { id } = useLocalSearchParams();
   const [loading, setLoading] = useState(true);
+  const [trip, setTrip] = useState(null);
+  const [user, setUser] = useState(auth.currentUser);
 
-  // 🔹 Henter data fra Firestore hvis det ikke finnes i URL
   useEffect(() => {
     if (!id) {
-      console.error("❌ ID mangler, kan ikke hente data!");
+      console.error("❌ Ingen ID spesifisert!");
       return;
     }
 
-    if (!location || !date || !volunteers || !wasteCollectedKG) {
-      console.log("🔄 Henter data fra Firestore...");
-      const fetchData = async () => {
-        try {
-          const docRef = doc(db, "cleanup_trips", id as string);
-          const docSnap = await getDoc(docRef);
+    const fetchData = async () => {
+      try {
+        const docRef = doc(db, "cleanup_trips", id as string);
+        const docSnap = await getDoc(docRef);
 
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            setNewLocation(data.location || "Ukjent sted");
-            setNewDate(data.date || "Ukjent dato");
-            setNewVolunteers(String(data.volunteers || 0));
-            setNewWasteCollectedKG(String(data.wasteCollectedKG || 0));
-          } else {
-            console.error("❌ Dokumentet finnes ikke i Firestore");
-          }
-        } catch (error) {
-          console.error("❌ Feil ved henting av data:", error);
-        } finally {
-          setLoading(false);
+        if (docSnap.exists()) {
+          setTrip(docSnap.data());
+        } else {
+          console.error("❌ Dokumentet finnes ikke i Firestore");
         }
-      };
-      fetchData();
-    } else {
-      setLoading(false);
-    }
-  }, [id, location, date, volunteers, wasteCollectedKG]);
+      } catch (error) {
+        console.error("❌ Feil ved henting av data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const handleUpdate = async () => {
-    try {
-      const tripRef = doc(db, "cleanup_trips", id as string);
-      await updateDoc(tripRef, {
-        location: newLocation || "Ukjent sted",
-        date: newDate || new Date().toISOString().split("T")[0],
-        volunteers: parseInt(newVolunteers) || 0,
-        wasteCollectedKG: parseInt(newWasteCollectedKG) || 0,
-      });
-
-      Alert.alert("✅ Oppdatert!", "Ryddeaksjonen er oppdatert.");
-      router.push("/"); 
-    } catch (error) {
-      console.error("❌ Feil ved oppdatering:", error);
-      Alert.alert("⚠️ Feil", "Kunne ikke oppdatere ryddeaksjonen.");
-    }
-  };
-
-  const handleDelete = async () => {
-    console.log("🗑 Prøver å slette ryddeaksjonen med ID:", id);
-
-    Alert.alert(
-      "Bekreft sletting",
-      "Er du sikker på at du vil slette denne ryddeaksjonen?",
-      [
-        { text: "Avbryt", style: "cancel" },
-        { 
-          text: "🗑 Slett", 
-          onPress: async () => {
-            try {
-              console.log("🚀 Sletter fra Firestore nå...");
-              await deleteDoc(doc(db, "cleanup_trips", id as string));
-              console.log("✅ Sletting vellykket!");
-
-              Alert.alert("🗑 Slettet!", "Ryddeaksjonen er fjernet.");
-              router.push("/");
-            } catch (error) {
-              console.error("❌ Feil ved sletting:", error);
-              Alert.alert("⚠️ Feil", "Kunne ikke slette ryddeaksjonen.");
-            }
-          }
-        }
-      ]
-    );
-  };
+    fetchData();
+  }, [id]);
 
   if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Laster...</Text>
-      </View>
-    );
+    return <Text>⏳ Laster detaljer...</Text>;
   }
 
+  if (!trip) {
+    return <Text>⚠️ Kunne ikke finne ryddeaksjonen.</Text>;
+  }
+
+  const { 
+    location, 
+    date, 
+    time, 
+    participants = [],  // ✅ Sikrer at `participants` er en array
+    wasteCollectedKG, 
+    imageUrl, 
+    organizer 
+  } = trip;
+  
+  const isFull = participants.length >= trip.maxParticipants;
+  const isSignedUp = Array.isArray(participants) && participants.includes(user?.email);
+  
+
+  const handleSignUp = async () => {
+    if (!user) {
+      Alert.alert("⚠️ Du må være logget inn for å melde deg på.");
+      return;
+    }
+  
+    // ✅ Sikrer at `participants` alltid er en array
+    const currentParticipants = Array.isArray(trip.participants) ? trip.participants : [];
+  
+    if (currentParticipants.includes(user.email)) {
+      Alert.alert("✅ Du er allerede påmeldt.");
+      return;
+    }
+  
+    if (currentParticipants.length >= trip.maxParticipants) {
+      Alert.alert("⚠️ Ingen tilgjengelige plasser.");
+      return;
+    }
+  
+    try {
+      const tripRef = doc(db, "cleanup_trips", id as string);
+      const updatedParticipants = [...currentParticipants, user.email];
+  
+      await updateDoc(tripRef, { participants: updatedParticipants });
+  
+      setTrip((prev) => ({ ...prev, participants: updatedParticipants }));
+      Alert.alert("🎉 Påmeldt!", "Du er nå påmeldt ryddeaksjonen.");
+    } catch (error) {
+      console.error("❌ Feil ved påmelding:", error);
+      Alert.alert("⚠️ Kunne ikke melde deg på. Prøv igjen.");
+    }
+  };
+  
+
+  const handleCancelSignUp = async () => {
+    if (!user || !isSignedUp) {
+      Alert.alert("⚠️ Du er ikke påmeldt.");
+      return;
+    }
+
+    try {
+      const tripRef = doc(db, "cleanup_trips", id as string);
+      const updatedParticipants = participants.filter((email) => email !== user.email);
+
+      await updateDoc(tripRef, { participants: updatedParticipants });
+
+      setTrip((prev) => ({ ...prev, participants: updatedParticipants }));
+      Alert.alert("❌ Påmelding kansellert", "Du har meldt deg av ryddeaksjonen.");
+    } catch (error) {
+      console.error("❌ Feil ved avmelding:", error);
+      Alert.alert("⚠️ Kunne ikke melde deg av. Prøv igjen.");
+    }
+  };
+
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === "ios" ? "padding" : "height"} 
-      style={{ flex: 1 }}
-    >
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.container}>
-          <Text style={styles.title}>Rediger ryddeaksjon</Text>
+    <ScrollView contentContainerStyle={styles.container}>
+      {/* 🔹 Viser bilde hvis det finnes */}
+      {imageUrl ? <Image source={{ uri: imageUrl }} style={styles.image} /> : <Text>📷 Ingen bilde tilgjengelig</Text>}
 
-          <Text style={styles.label}>📍 Sted:</Text>
-          <TextInput style={styles.input} value={newLocation} onChangeText={setNewLocation} />
+      <Text style={styles.title}>Detaljer for ryddeaksjon</Text>
 
-          <Text style={styles.label}>📅 Dato:</Text>
-          <TextInput style={styles.input} value={newDate} onChangeText={setNewDate} />
+      <Text style={styles.label}>👤 Arrangør:</Text>
+      <Text style={styles.info}>{organizer}</Text>
 
-          <Text style={styles.label}>👥 Frivillige:</Text>
-          <TextInput style={styles.input} value={newVolunteers} onChangeText={setNewVolunteers} keyboardType="numeric" />
+      <Text style={styles.label}>📍 Sted:</Text>
+      <Text style={styles.info}>{location}</Text>
 
-          <Text style={styles.label}>🗑️ Innsamlet avfall (kg):</Text>
-          <TextInput style={styles.input} value={newWasteCollectedKG} onChangeText={setNewWasteCollectedKG} keyboardType="numeric" />
+      <Text style={styles.label}>📅 Dato & tid</Text>
+      <Text style={styles.info}>{date} kl.{time}</Text>
 
-          <Button title="💾 Lagre endringer" onPress={handleUpdate} />
-          <Button title="🗑 Slett" color="red" onPress={handleDelete} />
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      <Text style={styles.label}>🗑️ Oppryddingsmål:</Text>
+      <Text style={styles.info}>{wasteCollectedKG} kg</Text>
+
+      <Text style={styles.label}>✅ Påmeldte deltakere:</Text>
+      {participants.length > 0 ? (
+        participants.map((p, index) => (
+          <Text key={index} style={styles.participant}>👤 {p}</Text>
+        ))
+      ) : (
+        <Text style={styles.info}>Ingen deltakere ennå</Text>
+      )}
+
+      {/* 🔹 Påmeldingsknapp */}
+      {!isSignedUp && !isFull && <Button title="✅ Meld deg på" onPress={handleSignUp} color="green" />}
+
+      {/* 🔹 Avmeldingsknapp */}
+      {isSignedUp && <Button title="❌ Meld deg av" onPress={handleCancelSignUp} color="red" />}
+
+      {/* 🔹 Viser melding hvis aksjonen er full */}
+      {isFull && !isSignedUp && <Text style={styles.fullMessage}>⚠️ Denne aksjonen er full.</Text>}
+
+      <Button title="🔙 Tilbake" onPress={() => router.push("/")} />
+    </ScrollView>
   );
 }
 
-// 🔹 Styling for skjermen
+// 🔹 Styling
 const styles = StyleSheet.create({
-  scrollContainer: {
-    flexGrow: 1, 
-    justifyContent: "center",
-  },
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: '#f8f9fa',
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 15,
-  },
-  label: {
-    fontWeight: 'bold',
-    marginTop: 10,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 10,
-    backgroundColor: "#fff",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    fontSize: 18,
-    fontWeight: "bold",
-  },
+  container: { flexGrow: 1, padding: 20, backgroundColor: "#f8f9fa" },
+  image: { width: "100%", height: 200, borderRadius: 10, marginBottom: 10 },
+  title: { fontSize: 22, fontWeight: "bold", marginBottom: 15 },
+  label: { fontWeight: "bold", marginTop: 10 },
+  info: { backgroundColor: "#fff", padding: 10, borderRadius: 5, marginBottom: 10, borderWidth: 1, borderColor: "#ccc" },
+  participant: { fontSize: 16, marginBottom: 5 },
+  fullMessage: { color: "red", fontWeight: "bold", marginVertical: 10 },
 });

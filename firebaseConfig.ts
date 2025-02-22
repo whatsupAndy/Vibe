@@ -1,9 +1,10 @@
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { getAuth, initializeAuth, getReactNativePersistence } from "firebase/auth";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 
-// 🔍 Sjekk at variablene blir hentet riktig
+// 🔍 Sjekk at miljøvariablene blir lastet riktig
 console.log("✅ Laster Firebase-miljøvariabler:", Constants.expoConfig?.extra);
 
 const firebaseConfig = {
@@ -17,6 +18,14 @@ const firebaseConfig = {
 
 // 🚀 Initialiser Firebase
 const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+
+// 📌 Sikrer at brukeren forblir pålogget selv etter at appen lukkes
+const auth = initializeAuth(app, {
+  persistence: getReactNativePersistence(AsyncStorage),
+});
+
+const db = getFirestore(app);
+
+// 📌 Eksporter `auth` og `db`
+export { auth, db };
 export default app;
