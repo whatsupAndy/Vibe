@@ -1,5 +1,5 @@
 🌿 Vibe
-Vibe er en minimalistisk mobilapp laget med Expo og React Native, hvor brukere kan opprette, utforske og melde seg på aktiviteter. Appen bruker Firebase for autentisering og datalagring. Designet er enkelt og moderne, med neon-grønn styling og støtte for bildeopplasting.
+Vibe er en minimalistisk mobilapp laget med Expo og React Native, hvor brukere kan opprette, utforske og melde seg på aktiviteter. Appen bruker Firebase for autentisering og datalagring. Designet er enkelt og moderne, med fresh styling og støtte for bildeopplasting.
 
 🔧 Teknologier brukt
 React Native (med Expo)
@@ -11,9 +11,7 @@ Firebase Authentication og Firestore
 Expo ImagePicker for bildevalg
 
 🗂️ Mappestruktur
-bash
-Kopier
-Rediger
+
 Vibe/  
 │── app/  
 │   ├── activity/                # Detaljer og oppmelding for aktiviteter  
@@ -33,33 +31,26 @@ Vibe/
 │── app.config.js              # Expo-konfig  
 │── tsconfig.json              # TypeScript-oppsett  
 │── README.md  
+
+
 🚀 Kom i gang
+
 Installasjon
 Klon repoet:
 
-bash
-Kopier
-Rediger
 git clone <repo-url>
 cd Vibe
 Installer avhengigheter:
 
-bash
-Kopier
-Rediger
 npm install
 Start Expo:
 
-bash
-Kopier
-Rediger
 npx expo start
+
+
 🔐 Firebase-oppsett
 Firestore regler (oppdatert):
 
-js
-Kopier
-Rediger
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -74,7 +65,9 @@ service cloud.firestore {
     }
   }
 }
-🧩 Funksjonalitet
+
+
+Funksjonalitet
 ✅ Brukerregistrering og -innlogging
 
 ✅ Opprettelse av nye aktiviteter
@@ -87,11 +80,11 @@ service cloud.firestore {
 
 ✅ Minimalistisk grensesnitt med SafeAreaView-støtte
 
+
 💡 Viktige kodeeksempler
+
 Hente aktiviteter:
-ts
-Kopier
-Rediger
+
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/firebaseConfig";
 
@@ -99,20 +92,17 @@ async function fetchActivities() {
   const querySnapshot = await getDocs(collection(db, "activities"));
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
+
 Påmelding:
-ts
-Kopier
-Rediger
 import { doc, updateDoc } from "firebase/firestore";
 
 async function handleSignUp(userId: string, activityId: string, participants: string[]) {
   const activityRef = doc(db, "activities", activityId);
   await updateDoc(activityRef, { participants: [...participants, userId] });
 }
+
 Velge bilde fra galleri:
-ts
-Kopier
-Rediger
+
 import * as ImagePicker from "expo-image-picker";
 
 async function pickImage(setImage: (uri: string) => void) {
@@ -127,10 +117,11 @@ async function pickImage(setImage: (uri: string) => void) {
     setImage(result.assets[0].uri);
   }
 }
-🔭 Mulig videre utvikling
-📍 Kartvisning av aktiviteter
 
-🔔 Push-varsler ved påmelding
+--------------------------
+
+Mulig videre utvikling
+📍 Kartvisning av aktiviteter
 
 💬 Kommentarfelt eller meldingssystem
 
@@ -140,5 +131,5 @@ async function pickImage(setImage: (uri: string) => void) {
 
 Bilder kan legges til i assets/images og vises her.
 
-✨ Takk for at du bruker Vibe!
-Laget med ❤️ og 💡 med fokus på enkelhet, miljø og fellesskap.
+Takk for at du bruker Vibe!
+
