@@ -136,14 +136,7 @@ async function pickImage(setImage: (uri: string) => void) {
 
 🎨 Mer avansert design og animasjoner
 
-📸 Skjermbilder
-Logg inn
 
-Opprett ny aktivitet
-
-Påmelding
-
-Logo og mørkt tema
 
 Bilder kan legges til i assets/images og vises her.
 
