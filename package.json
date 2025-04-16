@@ -1,5 +1,5 @@
 {
-  "name": "paddleforocean",
+  "name": "vibe",
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
@@ -16,7 +16,8 @@
   },
   "dependencies": {
     "@expo/vector-icons": "^14.0.2",
-    "@react-native-async-storage/async-storage": "^1.24.0",
+    "@expo/webpack-config": "^19.0.1",
+    "@react-native-async-storage/async-storage": "1.23.1",
     "@react-navigation/bottom-tabs": "^7.2.0",
     "@react-navigation/native": "^7.0.14",
     "expo": "^52.0.36",
@@ -45,6 +46,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
+    "@expo/config": "^10.0.10",
     "@types/caseless": "^0.12.5",
     "@types/configstore": "^6.0.2",
     "@types/debug": "^4.1.12",

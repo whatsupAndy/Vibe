@@ -1,50 +1,151 @@
-# Welcome to your Expo app 👋
+🌿 Vibe
+Vibe er en minimalistisk mobilapp laget med Expo og React Native, hvor brukere kan opprette, utforske og melde seg på aktiviteter. Appen bruker Firebase for autentisering og datalagring. Designet er enkelt og moderne, med neon-grønn styling og støtte for bildeopplasting.
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+🔧 Teknologier brukt
+React Native (med Expo)
 
-## Get started
+Expo Router for navigasjon
 
-1. Install dependencies
+Firebase Authentication og Firestore
 
-   ```bash
-   npm install
-   ```
+Expo ImagePicker for bildevalg
 
-2. Start the app
+🗂️ Mappestruktur
+bash
+Kopier
+Rediger
+Vibe/  
+│── app/  
+│   ├── activity/                # Detaljer og oppmelding for aktiviteter  
+│   │   ├── _layout.tsx  
+│   │   ├── +not-found.tsx  
+│   ├── tabs/                    # Fane-navigasjon  
+│   │   ├── _layout.tsx  
+│   ├── index.tsx               # Hovedskjerm  
+│   ├── login.tsx               # Innlogging  
+│   ├── register.tsx            # Registrering  
+│   ├── settings.tsx            # Innstillinger  
+│── assets/  
+│   ├── fonts/  
+│   ├── images/                 # Inkl. logo.png  
+│── components/                # Gjenbrukbare komponenter som ReturnBtn  
+│── firebaseConfig.ts          # Firebase-oppsett  
+│── app.config.js              # Expo-konfig  
+│── tsconfig.json              # TypeScript-oppsett  
+│── README.md  
+🚀 Kom i gang
+Installasjon
+Klon repoet:
 
-   ```bash
-    npx expo start
-   ```
+bash
+Kopier
+Rediger
+git clone <repo-url>
+cd Vibe
+Installer avhengigheter:
 
-In the output, you'll find options to open the app in a
+bash
+Kopier
+Rediger
+npm install
+Start Expo:
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+bash
+Kopier
+Rediger
+npx expo start
+🔐 Firebase-oppsett
+Firestore regler (oppdatert):
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+js
+Kopier
+Rediger
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
 
-## Get a fresh project
+    match /activities/{document=**} {
+      allow read, write: if request.auth != null;
+    }
 
-When you're ready, run:
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
+🧩 Funksjonalitet
+✅ Brukerregistrering og -innlogging
 
-```bash
-npm run reset-project
-```
+✅ Opprettelse av nye aktiviteter
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+✅ Påmelding til aktiviteter (med deltakerbegrensning)
 
-## Learn more
+✅ Bildevalg fra galleriet
 
-To learn more about developing your project with Expo, look at the following resources:
+✅ Firebase-integrasjon for lagring og autentisering
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+✅ Minimalistisk grensesnitt med SafeAreaView-støtte
 
-## Join the community
+💡 Viktige kodeeksempler
+Hente aktiviteter:
+ts
+Kopier
+Rediger
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "@/firebaseConfig";
 
-Join our community of developers creating universal apps.
+async function fetchActivities() {
+  const querySnapshot = await getDocs(collection(db, "activities"));
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+Påmelding:
+ts
+Kopier
+Rediger
+import { doc, updateDoc } from "firebase/firestore";
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+async function handleSignUp(userId: string, activityId: string, participants: string[]) {
+  const activityRef = doc(db, "activities", activityId);
+  await updateDoc(activityRef, { participants: [...participants, userId] });
+}
+Velge bilde fra galleri:
+ts
+Kopier
+Rediger
+import * as ImagePicker from "expo-image-picker";
+
+async function pickImage(setImage: (uri: string) => void) {
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    allowsEditing: true,
+    aspect: [4, 3],
+    quality: 1,
+  });
+
+  if (!result.canceled) {
+    setImage(result.assets[0].uri);
+  }
+}
+🔭 Mulig videre utvikling
+📍 Kartvisning av aktiviteter
+
+🔔 Push-varsler ved påmelding
+
+💬 Kommentarfelt eller meldingssystem
+
+🎨 Mer avansert design og animasjoner
+
+📸 Skjermbilder
+Logg inn
+
+Opprett ny aktivitet
+
+Påmelding
+
+Logo og mørkt tema
+
+Bilder kan legges til i assets/images og vises her.
+
+✨ Takk for at du bruker Vibe!
+Laget med ❤️ og 💡 med fokus på enkelhet, miljø og fellesskap.

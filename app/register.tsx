@@ -4,8 +4,11 @@ import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth, db } from "@/firebaseConfig";
 import { useRouter } from "expo-router";
 import { doc, setDoc } from "firebase/firestore"; // 🔹 Importer Firestore-funksjoner
+import { Image } from "react-native";
+import Logo from "@/assets/images/logo.png"
 
 export default function RegisterScreen() {
+  
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -38,32 +41,46 @@ export default function RegisterScreen() {
 
   return (
     <View style={styles.container}>
-      <TextInput style={styles.input} placeholder="Brukernavn" value={username} onChangeText={setUsername} />
-      <TextInput style={styles.input} placeholder="E-post" value={email} onChangeText={setEmail} />
-      <TextInput style={styles.input} placeholder="Passord" value={password} onChangeText={setPassword} secureTextEntry />
+      <Image source={Logo} style={styles.logo} />
+
+      <TextInput style={styles.input} placeholder="Brukernavn" placeholderTextColor="#999"  value={username} onChangeText={setUsername} />
+      <TextInput style={styles.input} placeholder="E-post" placeholderTextColor="#999"  value={email} onChangeText={setEmail} />
+      <TextInput style={styles.input} placeholder="Passord" placeholderTextColor="#999"  value={password} onChangeText={setPassword} secureTextEntry />
       <Button title="Registrer" onPress={handleRegister} />
     </View>
   );
 }
 const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      padding: 20,
-      justifyContent: "center",
-      backgroundColor: "#f8f9fa",
-    },
-    title: {
-      fontSize: 22,
-      fontWeight: "bold",
-      marginBottom: 15,
-    },
-    input: {
-      backgroundColor: "#fff",
-      padding: 10,
-      marginBottom: 10,
-      borderRadius: 5,
-      borderWidth: 1,
-      borderColor: "#ccc",
-    },
-  });
+  container: {
+    flex: 1,
+    padding: 20,
+    justifyContent: "center",
+    backgroundColor: "#2c2c2e", // mørk bakgrunn
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: "bold",
+    marginBottom: 15,
+    color: "#D4FF00", // neon-gul tittel
+  },
+  input: {
+    backgroundColor: "#4a4a4c", // mørkt input-felt
+    borderWidth: 1,
+    borderColor: "#555", // kontrastkant
+  
+    padding: 12,
+    marginBottom: 12,
+    borderRadius: 8,
+    color: "#fff", // hvit tekst
+  },
+  logo: {
+    width: 160,
+    height: 60,
+    resizeMode: "contain",
+    alignSelf: "center",
+    marginBottom: 30,
+  },
+  
+});
+
   

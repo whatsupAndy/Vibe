@@ -4,19 +4,21 @@ import { useRouter } from 'expo-router';
 import { db, auth } from '../firebaseConfig';
 import { collection, getDocs } from 'firebase/firestore';
 import { onAuthStateChanged, signOut } from "firebase/auth";
+import FooterBar from './footer';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-// 🔹 Definer type for ryddeaksjoner
-type CleanupTrip = {
+type Activity = {
   id: string;
   location: string;
   date: string;
-  wasteCollectedKG: number;
+  organizer: string;
+  details: string;
   participants: number;
 };
 
 export default function HomeScreen() {
   const router = useRouter();
-  const [cleanupTrips, setCleanupTrips] = useState<CleanupTrip[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
@@ -27,15 +29,15 @@ export default function HomeScreen() {
       setUser(currentUser);
 
       if (currentUser) {
-        fetchCleanupTrips();
+        fetchActivities();
       }
     });
 
     return () => unsubscribe();
   }, []);
 
-  // 🔹 Henter ryddeaksjoner fra Firestore
-  const fetchCleanupTrips = async () => {
+  // 🔹 Henter aktiviteter fra Firestore
+  const fetchActivities = async () => {
     if (!auth.currentUser) {
       console.log("⚠️ Ingen bruker logget inn. Kan ikke hente data.");
       return;
@@ -43,18 +45,19 @@ export default function HomeScreen() {
 
     setLoading(true);
     try {
-      const querySnapshot = await getDocs(collection(db, "cleanup_trips"));
-      const fetchedTrips: CleanupTrip[] = querySnapshot.docs.map((doc) => ({
+      const querySnapshot = await getDocs(collection(db, "activities"));
+      const fetchActivities: Activity[] = querySnapshot.docs.map((doc) => ({
         id: doc.id,
         location: doc.data()?.location || "Ukjent sted",
+        organizer: doc.data()?.organizer || "Ukjent sted",
         date: doc.data()?.date || "Ukjent dato",
         participants: doc.data()?.maxParticipants || 0,
-        wasteCollectedKG: doc.data()?.wasteCollectedKG || 0,
+        details: doc.data()?.details || '',
       }));
       
 
-      console.log("📥 Hentet ryddeaksjoner:", fetchedTrips);
-      setCleanupTrips(fetchedTrips);
+      console.log("📥 Hentet aktiviteter:", fetchActivities);
+      setActivities(fetchActivities);
     } catch (error) {
       console.error("❌ Firebase-feil ved henting av data:", error);
     } finally {
@@ -66,7 +69,7 @@ export default function HomeScreen() {
   // 🔹 Trekker ned for å oppdatere
   const onRefresh = () => {
     setRefreshing(true);
-    fetchCleanupTrips();
+    fetchActivities();
   };
 
   // 🔹 Logg ut bruker
@@ -81,41 +84,35 @@ export default function HomeScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Alle Ryddeaksjoner</Text>
+    <SafeAreaView style={styles.container}>
+      <Text style={styles.title}>Vibe</Text>
       {user ? (
         <FlatList
-        data={cleanupTrips}
+        data={activities}
           keyExtractor={(item) => item.id}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           renderItem={({ item }) => (
             <Pressable onPress={() => router.push(`/activity/${item.id}`)}>
               <View style={styles.card}>
-                <Text style={styles.activityType}>📍 {item.location}</Text>
-                <Text>📅 Dato: {item.date}</Text>
-                <Text>🗑️ Oppryddingsmål: {item.wasteCollectedKG}kg </Text>
-                <Text>👥 Maks deltakere: {item.participants}</Text>
+                <Text style={[styles.activityType, styles.textWhite]}> {item.organizer}</Text>
+                <Text style={styles.textWhite}>📍  {item.location}</Text>
+                <Text style={styles.textWhite}>🗓️  {item.date}</Text>
+                <Text style={styles.textWhite}>{item.details}</Text>
               </View>
             </Pressable>
           )}
-          // 🔹 Plasserer "Ny ryddeaksjon" som en del av listen
-          ListHeaderComponent={() => (
-            <Button title="➕ Ny ryddeaksjon" onPress={() => router.push('/new-activity')} />
-          )}
-          // 🔹 Plasserer "Logg ut" nederst i listen
-          ListFooterComponent={() => (
-            <Button title="🚪 Logg ut" onPress={handleLogout} color="red" />
-          )}
+
         />
+        
       ) : (
         <View>
-          <Text>⚠️ Du må logge inn for å se ryddeaksjoner.</Text>
+          <Text>⚠️ Du må logge inn for å se aktiviteter.</Text>
           <Button title="🔑 Logg inn" onPress={() => router.replace("/login")} />
         </View>
       )}
-    </View>
+      <FooterBar/>
+    </SafeAreaView>
   );
-  
 }
 
 // 🔹 Styling
@@ -123,26 +120,32 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#f8f9fa'
+    backgroundColor: '#2c2c2e',
   },
   title: {
-    fontSize: 22,
+    fontSize: 25,
     fontWeight: 'bold',
-    marginBottom: 15
+    marginBottom: 15,
+    color: "#D4FF00",
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: '#4a4a4c',
     padding: 15,
     marginBottom: 10,
     borderRadius: 8,
+    borderWidth: 0.2,
     shadowColor: '#000',
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.65,
     shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
+    shadowRadius: 2,
     elevation: 3
   },
   activityType: {
     fontSize: 18,
     fontWeight: 'bold'
+  },
+  textWhite: {
+    color: '#ffffff'
   }
+  
 });

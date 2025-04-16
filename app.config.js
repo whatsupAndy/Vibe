@@ -2,8 +2,8 @@ import "dotenv/config";
 
 export default {
   expo: {
-    name: "PaddleForOcean",
-    slug: "paddleforocean",
+    name: "Vibe",
+    slug: "vibe",
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/images/icon.png",

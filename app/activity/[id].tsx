@@ -3,12 +3,15 @@ import { View, Text, Button, Alert, StyleSheet, ScrollView, Image } from "react-
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { db, auth } from "@/firebaseConfig";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
+import ReturnBtn from "@/components/ReturnBtn";
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-export default function CleanupTripDetailScreen() {
+
+export default function CleanupActivityDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const [loading, setLoading] = useState(true);
-  const [trip, setTrip] = useState<any>(null);
+  const [activity, setActivity] = useState<any>(null);
   const [user, setUser] = useState(auth.currentUser);
   const [participantUsernames, setParticipantUsernames] = useState<{ [uid: string]: string }>({});
 
@@ -20,16 +23,16 @@ export default function CleanupTripDetailScreen() {
   
     const fetchData = async () => {
       try {
-        const docRef = doc(db, "cleanup_trips", id as string);
+        const docRef = doc(db, "activities", id as string);
         const docSnap = await getDoc(docRef);
   
         if (docSnap.exists()) {
-          const tripData = docSnap.data();
-          setTrip(tripData);
+          const activityData = docSnap.data();
+          setActivity(activityData);
   
           // 🔹 Kall fetchUsernames hvis det finnes deltakere
-          if (tripData.participants && tripData.participants.length > 0) {
-            await fetchUsernames(tripData.participants);
+          if (activityData.participants && activityData.participants.length > 0) {
+            await fetchUsernames(activityData.participants);
           }
         } else {
           console.error("❌ Dokumentet finnes ikke i Firestore");
@@ -74,12 +77,12 @@ export default function CleanupTripDetailScreen() {
     return <Text>⏳ Laster detaljer...</Text>;
   }
 
-  if (!trip) {
-    return <Text>⚠️ Kunne ikke finne ryddeaksjonen.</Text>;
+  if (!activity) {
+    return <Text>⚠️ Kunne ikke finne aktiviteten.</Text>;
   }
 
-  const { location, date, time, participants = [], wasteCollectedKG, imageUrl, organizer } = trip;
-  const isFull = participants.length >= (trip?.maxParticipants ?? 0);
+  const { location, date, time, participants = [], details, imageUrl, organizer } = activity;
+  const isFull = participants.length >= (activity?.maxParticipants ?? 0);
   const isSignedUp = Array.isArray(participants) && participants.includes(user?.uid);
 
   const handleSignUp = async () => {
@@ -88,83 +91,131 @@ export default function CleanupTripDetailScreen() {
       return;
     }
   
-    if (!trip || !Array.isArray(trip.participants)) {
+    if (!activity || !Array.isArray(activity.participants)) {
       Alert.alert("❌ Feil", "Ugyldige data. Prøv igjen senere.");
       return;
     }
   
-    if (trip.participants.includes(user.uid)) {
+    if (activity.participants.includes(user.uid)) {
       Alert.alert("✅ Du er allerede påmeldt.");
       return;
     }
   
-    if (trip.participants.length >= (trip.maxParticipants || 10)) { // 🔹 Sjekker om aksjonen er full
-      Alert.alert("⚠️ Denne ryddeaksjonen er full.");
+    if (activity.participants.length >= (activity.maxParticipants || 10)) { // 🔹 Sjekker om aktiviteten er full
+      Alert.alert("⚠️ Denne aktiviteten er full.");
       return;
     }
   
     try {
-      const tripRef = doc(db, "cleanup_trips", id as string);
-      const updatedParticipants = [...trip.participants, user.uid];
+      const activityRef = doc(db, "activities", id as string);
+      const updatedParticipants = [...activity.participants, user.uid];
   
-      await updateDoc(tripRef, { participants: updatedParticipants });
-      setTrip((prev: any) => ({ ...prev, participants: updatedParticipants }));
+      await updateDoc(activityRef, { participants: updatedParticipants });
+      setActivity((prev: any) => ({ ...prev, participants: updatedParticipants }));
   
       fetchUsernames(updatedParticipants); // Oppdaterer brukernavnene
-      Alert.alert("🎉 Påmeldt!", "Du er nå påmeldt ryddeaksjonen.");
+      Alert.alert("🎉 Påmeldt!", "Du er nå påmeldt aktiviteten.");
     } catch (error) {
       console.error("❌ Feil ved påmelding:", error);
       Alert.alert("⚠️ Kunne ikke melde deg på. Prøv igjen.");
     }
   };
   
-  
-  
-
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      {imageUrl ? <Image source={{ uri: imageUrl }} style={styles.image} /> : <Text>📷 Ingen bilde tilgjengelig</Text>}
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView contentContainerStyle={styles.container}>
+        {imageUrl ? <Image source={{ uri: imageUrl }} style={styles.image} /> : <Text>📷 Ingen bilde tilgjengelig</Text>}
 
-      <Text style={styles.title}>Detaljer for ryddeaksjon</Text>
+        <Text style={styles.title}>Detaljer for aktivitet</Text>
 
-      <Text style={styles.label}>👤 Arrangør:</Text>
-      <Text style={styles.info}>{organizer}</Text>
+        <Text style={styles.label}>👤 Aktivitet:</Text>
+        <Text style={styles.info}>{organizer}</Text>
 
-      <Text style={styles.label}>📍 Sted:</Text>
-      <Text style={styles.info}>{location}</Text>
+        <Text style={styles.label}>📍 Sted:</Text>
+        <Text style={styles.info}>{location}</Text>
 
-      <Text style={styles.label}>📅 Dato & tid</Text>
-      <Text style={styles.info}>{date} kl.{time}</Text>
+        <Text style={styles.label}>🗓️ Dato & tid</Text>
+        <Text style={styles.info}>{date} kl.{time}</Text>
 
-      <Text style={styles.label}>🗑️ Oppryddingsmål:</Text>
-      <Text style={styles.info}>{wasteCollectedKG} kg</Text>
+        <Text style={styles.label}>Detaljer:</Text>
+        <Text style={[styles.info, styles.detailsText]}>{details}</Text>
 
-      <Text style={styles.label}>✅ Påmeldte deltakere:</Text>
-      {participants.length > 0 ? (
-        participants.map((uid: string | number, index: Key | null | undefined) => (
-          <Text key={index} style={styles.participant}>
-            👤 {participantUsernames[uid] || "Ukjent bruker"}
-          </Text>
-        ))
-      ) : (
-        <Text style={styles.info}>Ingen deltakere ennå</Text>
-      )}
+        <Text style={styles.label}>✅ Påmeldte deltakere:</Text>
+        {participants.length > 0 ? (
+          participants.map((uid: string | number, index: Key | null | undefined) => (
+            <Text key={index} style={styles.participant}>
+              👤 {participantUsernames[uid] || "Ukjent bruker"}
+            </Text>
+          ))
+        ) : (
+          <Text style={styles.info}>Ingen deltakere ennå</Text>
+        )}
 
-      {!isSignedUp && !isFull && <Button title="✅ Meld deg på" onPress={handleSignUp} color="green" />}
-      {isFull && !isSignedUp && <Text style={styles.fullMessage}>⚠️ Denne aksjonen er full.</Text>}
+        {!isSignedUp && !isFull && <Button title="✅ Meld deg på" onPress={handleSignUp} color="green" />}
+        {isFull && !isSignedUp && <Text style={styles.fullMessage}>⚠️ Denne aktiviteten er full.</Text>}
 
-      <Button title="🔙 Tilbake" onPress={() => router.push("/")} />
-    </ScrollView>
+        <ReturnBtn/>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 // 🔹 Styling
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, padding: 20, backgroundColor: "#f8f9fa" },
-  image: { width: "100%", height: 200, borderRadius: 10, marginBottom: 10 },
-  title: { fontSize: 22, fontWeight: "bold", marginBottom: 15 },
-  label: { fontWeight: "bold", marginTop: 10 },
-  info: { backgroundColor: "#fff", padding: 10, borderRadius: 5, marginBottom: 10, borderWidth: 1, borderColor: "#ccc" },
-  participant: { fontSize: 16, marginBottom: 5 },
-  fullMessage: { color: "red", fontWeight: "bold", marginVertical: 10 },
+  container: {
+    flexGrow: 1,
+    padding: 20,
+    backgroundColor: "#2c2c2e",
+  },
+  image: {
+    width: "100%",
+    height: 200,
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+  title: {
+    fontSize: 25,
+    fontWeight: "bold",
+    marginBottom: 15,
+    color: "#D4FF00",
+  },
+  label: {
+    fontWeight: "bold",
+    marginTop: 10,
+    color: "#ffffff",
+  },
+  info: {
+    backgroundColor: "#4a4a4c", 
+    padding: 10,
+    borderRadius: 5,
+    marginBottom: 10,
+    borderWidth: 0.2,
+    shadowColor: '#000',
+    shadowOpacity: 0.65,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 2,
+    borderColor: "#5c5c5e",
+    color: "#ffffff",
+  },
+  participant: {
+    fontSize: 16,
+    marginBottom: 5,
+    color: "#ffffff",
+  },
+  fullMessage: {
+    color: "red",
+    fontWeight: "bold",
+    marginVertical: 10,
+  },
+  detailsText: {
+    minHeight: 100,
+    textAlignVertical: "top",
+    color: "#ffffff",
+  },
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#2c2c2e',
+  },
+  
+  
 });
